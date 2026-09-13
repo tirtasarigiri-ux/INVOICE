@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nota Digital ala Marketplace</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#f97316">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* Hide scrollbar for cleaner mobile look */
+        ::-webkit-scrollbar { display: none; }
+        /* Pastikan tabel tidak memotong kata di tengah */
+        td { word-break: break-word; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 antialiased font-sans flex flex-col min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-orange-500 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
+        <h1 class="text-xl font-bold">Pembuat Invoice</h1>
+        <button id="installApp" class="hidden bg-white text-orange-500 px-3 py-1 rounded text-sm font-semibold">Install App</button>
+    </header>
+
+    <main class="p-4 flex-grow w-full max-w-2xl mx-auto">
+        <!-- Input Form -->
+        <div class="bg-white p-4 rounded-lg shadow mb-6">
+            <h2 class="font-semibold text-lg mb-3">Input Data</h2>
+            <div class="space-y-3">
+                <div class="flex gap-2">
+                    <div class="w-full">
+                        <label class="block text-sm text-gray-600 mb-1">Tanggal Invoice</label>
+                        <input type="date" id="invoiceDate" class="w-full border rounded p-2 outline-none focus:border-orange-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Nama Pembeli</label>
+                    <input type="text" id="customerName" class="w-full border rounded p-2 outline-none focus:border-orange-500" placeholder="Contoh: Budi">
+                </div>
+                <div class="flex gap-2">
+                    <div class="flex-grow">
+                        <label class="block text-sm text-gray-600 mb-1">Nama Produk</label>
+                        <input type="text" id="itemName" class="w-full border rounded p-2 outline-none focus:border-orange-500" placeholder="Contoh: Sepatu Sneakers">
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <div class="w-1/2">
+                        <label class="block text-sm text-gray-600 mb-1">Harga Satuan (Rp)</label>
+                        <input type="number" id="itemPrice" class="w-full border rounded p-2 outline-none focus:border-orange-500" placeholder="0">
+                    </div>
+                    <div class="w-1/2">
+                        <label class="block text-sm text-gray-600 mb-1">Jumlah</label>
+                        <input type="number" id="itemQty" class="w-full border rounded p-2 outline-none focus:border-orange-500" placeholder="1" value="1">
+                    </div>
+                </div>
+                <button onclick="addItem()" class="w-full bg-orange-500 text-white font-semibold py-2 rounded mt-2 hover:bg-orange-600 transition">Tambah Produk</button>
+            </div>
+        </div>
+
+        <!-- Receipt Preview (This is what will be downloaded) -->
+        <h2 class="font-semibold text-lg mb-2 text-center">Preview Invoice</h2>
+        <div class="overflow-x-auto bg-white rounded shadow-sm border border-gray-200 mb-4">
+            <div id="receipt-container" class="p-6 min-w-[600px] bg-white relative">
+                <!-- Header Invoice -->
+                <div class="flex justify-between items-start mb-6 border-b pb-4">
+                    <div>
+                        <h3 class="text-3xl font-extrabold text-orange-500 tracking-tight">LM GRUP</h3>
+                        <p class="text-xs text-gray-500 mt-1">Layanan Jasa Serba Serbi</p>
+                    </div>
+                    <div class="text-right">
+                        <h2 class="text-2xl font-bold text-gray-800 tracking-widest">INVOICE</h2>
+                        <p class="text-sm text-orange-500 font-semibold mt-1" id="r-invoiceNum"></p>
+                    </div>
+                </div>
+
+                <!-- Info Penjual & Pembeli -->
+                <div class="flex justify-between mb-6 text-sm">
+                    <div class="w-1/2 pr-4">
+                        <p class="font-bold text-gray-800 mb-2">DITERBITKAN ATAS NAMA</p>
+                        <div class="flex">
+                            <span class="text-gray-500 w-20 flex-shrink-0">Penjual</span>
+                            <span class="font-semibold text-gray-800">: Toko Kita</span>
+                        </div>
+                    </div>
+                    <div class="w-1/2 pl-4 border-l">
+                        <p class="font-bold text-gray-800 mb-2">UNTUK</p>
+                        <div class="flex mb-1">
+                            <span class="text-gray-500 w-20 flex-shrink-0">Pembeli</span>
+                            <span class="font-semibold text-gray-800" id="r-customerName">: -</span>
+                        </div>
+                        <div class="flex">
+                            <span class="text-gray-500 w-20 flex-shrink-0">Tanggal</span>
+                            <span class="font-semibold text-gray-800" id="receiptDate">: </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <table class="w-full text-sm mb-6 border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 border-y-2 border-gray-300">
+                            <th class="text-left py-3 px-2 font-bold text-gray-700 w-2/5">INFO PRODUK</th>
+                            <th class="text-center py-3 px-2 font-bold text-gray-700 w-1/5">JUMLAH</th>
+                            <th class="text-right py-3 px-2 font-bold text-gray-700 w-1/5">HARGA SATUAN</th>
+                            <th class="text-right py-3 px-2 font-bold text-gray-700 w-1/5">TOTAL HARGA</th>
+                        </tr>
+                    </thead>
+                    <tbody id="receipt-items">
+                        <!-- Items -->
+                    </tbody>
+                </table>
+
+                <!-- Summary -->
+                <div class="flex justify-end text-sm">
+                    <div class="w-1/2">
+                        <div class="flex justify-between py-1">
+                            <span class="text-gray-600 font-semibold">TOTAL HARGA (BARANG)</span>
+                            <span class="font-semibold text-gray-800" id="r-subtotal">Rp 0</span>
+                        </div>
+                        <div class="flex justify-between py-1 border-b-2 border-gray-200 mb-2 pb-2">
+                            <span class="text-gray-600 font-semibold">TOTAL ONGKOS KIRIM</span>
+                            <span class="font-semibold text-gray-800">Rp 0</span>
+                        </div>
+                        <div class="flex justify-between py-2">
+                            <span class="font-bold text-gray-800 text-base">TOTAL BELANJA</span>
+                            <span class="font-bold text-orange-500 text-xl" id="r-total">Rp 0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex gap-2 mb-8">
+            <button onclick="resetNota()" class="w-1/3 bg-gray-200 text-gray-800 font-semibold py-3 rounded hover:bg-gray-300 transition text-sm">Reset</button>
+            <button onclick="downloadNota()" class="w-2/3 bg-orange-500 text-white font-semibold py-3 rounded hover:bg-orange-600 transition text-sm shadow flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download Invoice
+            </button>
+        </div>
+    </main>
+
+    <script>
+        let items = [];
+
+        // Generate Random Invoice Number
+        const generateInvoiceNum = () => {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+            return `INV/${yyyy}${mm}${dd}/${random}`;
+        };
+
+        // Format to Rupiah
+        const formatRp = (angka) => {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
+        };
+
+        // Set Default Date and Update Preview
+        const setDate = () => {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const formattedDate = `${yyyy}-${mm}-${dd}`;
+            
+            document.getElementById('invoiceDate').value = formattedDate;
+            document.getElementById('r-invoiceNum').innerText = generateInvoiceNum();
+            updatePreviewDate(formattedDate);
+        };
+
+        const updatePreviewDate = (dateString) => {
+            if (!dateString) return;
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            const dateObj = new Date(dateString);
+            document.getElementById('receiptDate').innerText = `: ${dateObj.toLocaleDateString('id-ID', options)}`;
+        };
+
+        document.getElementById('invoiceDate').addEventListener('input', function(e) {
+            updatePreviewDate(e.target.value);
+        });
+
+        setDate();
+
+        // Customer Name Sync
+        document.getElementById('customerName').addEventListener('input', function(e) {
+            document.getElementById('r-customerName').innerText = `: ${e.target.value || '-'}`;
+        });
+
+        // Add Item
+        function addItem() {
+            const name = document.getElementById('itemName').value;
+            const price = parseFloat(document.getElementById('itemPrice').value);
+            const qty = parseInt(document.getElementById('itemQty').value);
+
+            if (!name || isNaN(price) || isNaN(qty)) {
+                alert('Mohon isi nama barang, harga, dan jumlah dengan benar.');
+                return;
+            }
+
+            items.push({ name, price, qty, subtotal: price * qty });
+            renderItems();
+            
+            // Clear inputs
+            document.getElementById('itemName').value = '';
+            document.getElementById('itemPrice').value = '';
+            document.getElementById('itemQty').value = '1';
+        }
+
+        // Render Items to Receipt
+        function renderItems() {
+            const tbody = document.getElementById('receipt-items');
+            tbody.innerHTML = '';
+            let total = 0;
+
+            items.forEach((item, index) => {
+                total += item.subtotal;
+                tbody.innerHTML += `
+                    <tr class="border-b border-gray-200">
+                        <td class="py-3 px-2 text-gray-800 font-medium">${item.name}</td>
+                        <td class="py-3 px-2 text-center text-gray-700">${item.qty}</td>
+                        <td class="py-3 px-2 text-right text-gray-700">${formatRp(item.price)}</td>
+                        <td class="py-3 px-2 text-right text-gray-800 font-semibold">${formatRp(item.subtotal)}</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('r-subtotal').innerText = formatRp(total);
+            document.getElementById('r-total').innerText = formatRp(total);
+        }
+
+        // Reset
+        function resetNota() {
+            if(confirm('Hapus semua data di invoice?')) {
+                items = [];
+                document.getElementById('customerName').value = '';
+                document.getElementById('r-customerName').innerText = ': -';
+                renderItems();
+                setDate(); // Reset date & invoice number
+            }
+        }
+
+        // Download Nota using html2canvas
+        function downloadNota() {
+            if (items.length === 0) {
+                alert('Invoice masih kosong!');
+                return;
+            }
+
+            const element = document.getElementById('receipt-container');
+            const btn = document.querySelector('button[onclick="downloadNota()"]');
+            btn.innerHTML = 'Memproses...';
+            
+            html2canvas(element, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Invoice_${document.getElementById('customerName').value || 'Pelanggan'}_${new Date().getTime()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                
+                btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg> Download Invoice`;
+            });
+        }
+
+        // --- PWA SUPPORT ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('Service Worker terdaftar!', reg))
+                    .catch(err => console.log('Gagal mendaftar Service Worker', err));
+            });
+        }
+    </script>
+</body>
+</html>
